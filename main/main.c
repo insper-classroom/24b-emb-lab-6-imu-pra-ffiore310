@@ -19,8 +19,11 @@ const int MPU_ADDRESS = 0x68;
 const int I2C_SDA_GPIO = 4;
 const int I2C_SCL_GPIO = 5;
 
-const int tx = 16;
-const int rx = 17;
+typedef struct {
+    int8_t x;
+    int8_t y;
+} data_mouse;
+
 
 static void mpu6050_reset() {
     // Two byte reset. First byte register, second byte data
@@ -68,8 +71,6 @@ void mpu6050_task(void* p) {
     i2c_init(i2c_default, 400 * 1000);
     uart_init(UART_ID, BAUD_RATE);
 
-    gpio_set_function(tx, GPIO_FUNC_UART);
-    gpio_set_function(rx, GPIO_FUNC_UART);
     gpio_set_function(I2C_SDA_GPIO, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL_GPIO, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SDA_GPIO);
@@ -103,15 +104,34 @@ void mpu6050_task(void* p) {
 
         const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 
-        printf("Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+        // printf("Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
 
-        uint8_t mais_sig = (data.val >> 8) & 0xFF;
-        uint8_t menos_sig = data.val & 0xFF;
-        uint8_t eop = 0xFF;
+        uint8_t mais_sig = ((int) euler.angle.pitch >> 8) & 0xFF;
+        uint8_t menos_sig = (int) euler.angle.pitch & 0xFF;
+
         uart_putc_raw(UART_ID, 0);
         uart_putc_raw(UART_ID, mais_sig);
         uart_putc_raw(UART_ID, menos_sig);
-        uart_putc_raw(UART_ID, eop);
+        uart_putc_raw(UART_ID, -1);
+
+
+        int angle = (euler.angle.roll) * (-1);
+        uint8_t mais_sig_ang = (angle >> 8) & 0xFF;
+        uint8_t menos_sig_ang = angle & 0xFF;
+
+        uart_putc_raw(UART_ID, 1);
+        uart_putc_raw(UART_ID, menos_sig_ang);
+        uart_putc_raw(UART_ID, mais_sig_ang);
+        uart_putc_raw(UART_ID, -1);
+
+        int accel = abs(acceleration[1]);
+        
+        if (accel > 17000){
+            uart_putc_raw(UART_ID, 2);
+            uart_putc_raw(UART_ID, 0);
+            uart_putc_raw(UART_ID, ((accel >> 8) & 0xFF));
+            uart_putc_raw(UART_ID, -1);
+        }
 
 
         vTaskDelay(pdMS_TO_TICKS(10));
