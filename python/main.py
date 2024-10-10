@@ -1,5 +1,6 @@
 import serial
 import uinput
+import time
 
 ser = serial.Serial('/dev/ttyACM0', 115200)
 
@@ -26,6 +27,8 @@ def move_mouse(axis, value):
     elif axis == 1:  # Y-axis
         device.emit(uinput.REL_Y, value)
     elif axis == 2:
+        device.emit(uinput.BTN_LEFT, 1)
+        time.sleep(0.1)
         device.emit(uinput.BTN_LEFT, 1)
 
 

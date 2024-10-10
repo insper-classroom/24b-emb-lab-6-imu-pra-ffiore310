@@ -98,10 +98,17 @@ void mpu6050_task(void* p) {
 
         const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 
-        // printf("Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+        //printf("Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
 
-        uint8_t mais_sig = ((int) euler.angle.pitch >> 8) & 0xFF;
-        uint8_t menos_sig = (int) euler.angle.pitch & 0xFF;
+        int yaw = (int) euler.angle.yaw;
+        // yaw = yaw - (4095/2);
+        // yaw = yaw/8;
+        // if (yaw > -30 && yaw < 30){
+        //     yaw = 0;
+        // }
+        
+        uint8_t mais_sig = (yaw >> 8) & 0xFF;
+        uint8_t menos_sig = yaw & 0xFF;
 
         uart_putc_raw(UART_ID, 0);
         uart_putc_raw(UART_ID, mais_sig);
@@ -109,17 +116,21 @@ void mpu6050_task(void* p) {
         uart_putc_raw(UART_ID, -1);
 
 
-        int angle = (euler.angle.roll) * (-1);
+        int angle = ((int) -euler.angle.roll) ;
+        // angle = angle - (4095/2);
+        // angle = angle/8;
+        // if (angle > -30 && angle < 30){
+        //     angle = 0;
+        // }
         uint8_t mais_sig_ang = (angle >> 8) & 0xFF;
         uint8_t menos_sig_ang = angle & 0xFF;
 
         uart_putc_raw(UART_ID, 1);
-        uart_putc_raw(UART_ID, menos_sig_ang);
         uart_putc_raw(UART_ID, mais_sig_ang);
+        uart_putc_raw(UART_ID, menos_sig_ang);
         uart_putc_raw(UART_ID, -1);
 
         int accel = abs(acceleration[1]);
-        
         if (accel > 17000){
             uart_putc_raw(UART_ID, 2);
             uart_putc_raw(UART_ID, 0);
